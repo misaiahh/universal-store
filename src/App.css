@@ -47,6 +47,25 @@
   font-size: 0.85rem;
 }
 
+.tab-dot {
+  color: #d97706;
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+  vertical-align: middle;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.badge-dirty {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+}
+
 .session {
   display: flex;
   align-items: center;
@@ -97,6 +116,29 @@
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
+}
+
+.group {
+  border: 1px solid #e2e2ea;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group legend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  padding: 0 0.35rem;
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 button {

@@ -14,6 +14,7 @@
     "@fastify/deepmerge": "^3.2.1",
     "@graphql-tools/schema": "^10.1.0",
     "graphql": "^16.14.2",
+    "immer": "^11.1.18",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zustand": "^5.0.14"

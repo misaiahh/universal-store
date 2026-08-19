@@ -41,6 +41,17 @@ function App() {
   )
   const [sessionDraft, setSessionDraft] = useState('')
 
+  // Per-page dirty flags (soft ≠ hard). Selected generically so adding a page
+  // needs no change here. Drives the header summary and the per-tab dot.
+  const dirtyByPage = useAppStore(
+    useShallow((s) => {
+      const out = {} as Record<PageKey, boolean>
+      for (const key of PAGE_KEYS) out[key] = s[key].dirty
+      return out
+    }),
+  )
+  const dirtyPages = PAGE_KEYS.filter((key) => dirtyByPage[key])
+
   return (
     <div className="layout">
       <header className="topbar">
@@ -54,6 +65,7 @@ function App() {
               onClick={() => setPage(id)}
             >
               {TAB_LABELS[id]}
+              {dirtyByPage[id] && <span className="tab-dot">●</span>}
             </button>
           ))}
         </nav>
@@ -100,6 +112,11 @@ function App() {
               : hydratedAt
                 ? `Hydrated at ${new Date(hydratedAt).toLocaleTimeString()}`
                 : 'Not hydrated yet'}
+          </span>
+          <span className="status">
+            {dirtyPages.length > 0
+              ? `Unsaved: ${dirtyPages.map((key) => TAB_LABELS[key]).join(', ')}`
+              : 'All pages saved'}
           </span>
         </div>
 

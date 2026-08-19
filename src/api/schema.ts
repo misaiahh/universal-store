@@ -15,7 +15,11 @@ const SEED: { [K in PageKey]: PageFormData[K] } = {
   profile: {
     fullName: 'Ada Lovelace',
     email: 'ada@example.com',
-    phone: '555-0100',
+    address: { street: '12 Analytical Way', city: 'London', zip: 'EC1A' },
+    phones: [
+      { label: 'mobile', number: '555-0100' },
+      { label: 'work', number: '555-0199' },
+    ],
   },
   company: {
     companyName: 'Analytical Engines Ltd',

@@ -32,7 +32,7 @@ function newSessionId(): string {
 
 export const createSessionSlice: StateCreator<
   AppStore,
-  [],
+  [['zustand/immer', never]],
   [],
   { session: SessionSlice }
 > = (set, get) => ({
@@ -54,7 +54,9 @@ export const createSessionSlice: StateCreator<
     // clear, and forms are already empty in that case.
     ensureSession: () => {
       if (!get().session.sessionId) {
-        set((s) => ({ session: { ...s.session, sessionId: newSessionId() } }))
+        set((s) => {
+          s.session.sessionId = newSessionId()
+        })
       }
     },
 
@@ -63,13 +65,17 @@ export const createSessionSlice: StateCreator<
     setSessionId: (id) => {
       if (id === get().session.sessionId) return
       get().session.wipeSoftData()
-      set((s) => ({ session: { ...s.session, sessionId: id } }))
+      set((s) => {
+        s.session.sessionId = id
+      })
     },
 
     // Start a brand-new session: mint a fresh id and wipe all soft data.
     resetSession: () => {
       get().session.wipeSoftData()
-      set((s) => ({ session: { ...s.session, sessionId: newSessionId() } }))
+      set((s) => {
+        s.session.sessionId = newSessionId()
+      })
     },
   },
 })

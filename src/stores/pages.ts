@@ -10,10 +10,27 @@ export type PageKey = (typeof PAGE_KEYS)[number]
 
 // Form value shape for each page. These are the ONLY fields that get persisted
 // and the fields that DynamoDB items must carry under their `form` attribute.
+//
+// Profile intentionally models the two non-flat shapes a form can grow into: a
+// nested OBJECT (`address`) and an ARRAY of objects (`phones`). deepEqual already
+// recurses into both, so `dirty` is correct; the slice's immer-based setters are
+// what make editing them ergonomic.
+export interface Address {
+  street: string
+  city: string
+  zip: string
+}
+
+export interface Phone {
+  label: string
+  number: string
+}
+
 export interface ProfileForm {
   fullName: string
   email: string
-  phone: string
+  address: Address
+  phones: Phone[]
 }
 
 export interface CompanyForm {

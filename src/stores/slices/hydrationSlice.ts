@@ -16,7 +16,7 @@ export interface HydrationSlice {
 
 export const createHydrationSlice: StateCreator<
   AppStore,
-  [],
+  [['zustand/immer', never]],
   [],
   HydrationSlice
 > = (set, get) => ({
@@ -26,7 +26,10 @@ export const createHydrationSlice: StateCreator<
 
   hydrate: async (sessionId = get().session.sessionId) => {
     if (get().hydrating) return
-    set({ hydrating: true, hydrationError: null })
+    set((s) => {
+      s.hydrating = true
+      s.hydrationError = null
+    })
     try {
       const items = await queryPagesByUser(sessionId)
 
@@ -53,11 +56,17 @@ export const createHydrationSlice: StateCreator<
         }
       }
 
-      set({ hydratedAt: new Date().toISOString() })
+      set((s) => {
+        s.hydratedAt = new Date().toISOString()
+      })
     } catch (err) {
-      set({ hydrationError: err instanceof Error ? err.message : String(err) })
+      set((s) => {
+        s.hydrationError = err instanceof Error ? err.message : String(err)
+      })
     } finally {
-      set({ hydrating: false })
+      set((s) => {
+        s.hydrating = false
+      })
     }
   },
 })

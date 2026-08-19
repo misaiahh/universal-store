@@ -3,18 +3,27 @@ import { useAppStore } from '../stores/appStore'
 
 // Company page consumes only its own nested slice.
 export function CompanyPage() {
-  const { form, setField, persist, saving, savedAt, hydrate, hydrating } =
-    useAppStore(
-      useShallow((s) => ({
-        form: s.company.form,
-        setField: s.company.setField,
-        persist: s.company.persist,
-        saving: s.company.saving,
-        savedAt: s.company.savedAt,
-        hydrate: s.company.hydrate,
-        hydrating: s.company.hydrating,
-      })),
-    )
+  const {
+    form,
+    stage,
+    persist,
+    saving,
+    savedAt,
+    hydrate,
+    hydrating,
+    dirty,
+  } = useAppStore(
+    useShallow((s) => ({
+      form: s.company.form,
+      stage: s.company.stage,
+      persist: s.company.persist,
+      saving: s.company.saving,
+      savedAt: s.company.savedAt,
+      hydrate: s.company.hydrate,
+      hydrating: s.company.hydrating,
+      dirty: s.company.dirty,
+    })),
+  )
 
   return (
     <section className="card">
@@ -24,14 +33,14 @@ export function CompanyPage() {
           Company name
           <input
             value={form.companyName}
-            onChange={(e) => setField('companyName', e.target.value)}
+            onChange={(e) => stage('companyName', e.target.value)}
           />
         </label>
         <label>
           Industry
           <input
             value={form.industry}
-            onChange={(e) => setField('industry', e.target.value)}
+            onChange={(e) => stage('industry', e.target.value)}
           />
         </label>
         <label>
@@ -40,12 +49,16 @@ export function CompanyPage() {
             type="number"
             min={0}
             value={form.employees}
-            onChange={(e) => setField('employees', Number(e.target.value))}
+            onChange={(e) => stage('employees', Number(e.target.value))}
           />
         </label>
       </form>
       <div className="toolbar">
-        <button type="button" onClick={() => void persist()} disabled={saving}>
+        <button
+          type="button"
+          onClick={() => void persist()}
+          disabled={saving || !dirty}
+        >
           {saving ? 'Saving…' : 'Save to DynamoDB'}
         </button>
         <button
@@ -55,6 +68,7 @@ export function CompanyPage() {
         >
           {hydrating ? 'Refetching…' : 'Refetch this page'}
         </button>
+        {dirty && <span className="badge badge-dirty">● Unsaved changes</span>}
         <span className="status">
           {savedAt
             ? `Saved at ${new Date(savedAt).toLocaleTimeString()}`

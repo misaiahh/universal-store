@@ -3,18 +3,27 @@ import { useAppStore } from '../stores/appStore'
 
 // Preferences page consumes only its own nested slice.
 export function PreferencesPage() {
-  const { form, setField, persist, saving, savedAt, hydrate, hydrating } =
-    useAppStore(
-      useShallow((s) => ({
-        form: s.preferences.form,
-        setField: s.preferences.setField,
-        persist: s.preferences.persist,
-        saving: s.preferences.saving,
-        savedAt: s.preferences.savedAt,
-        hydrate: s.preferences.hydrate,
-        hydrating: s.preferences.hydrating,
-      })),
-    )
+  const {
+    form,
+    stage,
+    persist,
+    saving,
+    savedAt,
+    hydrate,
+    hydrating,
+    dirty,
+  } = useAppStore(
+    useShallow((s) => ({
+      form: s.preferences.form,
+      stage: s.preferences.stage,
+      persist: s.preferences.persist,
+      saving: s.preferences.saving,
+      savedAt: s.preferences.savedAt,
+      hydrate: s.preferences.hydrate,
+      hydrating: s.preferences.hydrating,
+      dirty: s.preferences.dirty,
+    })),
+  )
 
   return (
     <section className="card">
@@ -25,7 +34,7 @@ export function PreferencesPage() {
           <select
             value={form.theme}
             onChange={(e) =>
-              setField('theme', e.target.value as 'light' | 'dark')
+              stage('theme', e.target.value as 'light' | 'dark')
             }
           >
             <option value="light">Light</option>
@@ -36,7 +45,7 @@ export function PreferencesPage() {
           Language
           <select
             value={form.language}
-            onChange={(e) => setField('language', e.target.value)}
+            onChange={(e) => stage('language', e.target.value)}
           >
             <option value="en">English</option>
             <option value="es">Spanish</option>
@@ -47,13 +56,17 @@ export function PreferencesPage() {
           <input
             type="checkbox"
             checked={form.newsletter}
-            onChange={(e) => setField('newsletter', e.target.checked)}
+            onChange={(e) => stage('newsletter', e.target.checked)}
           />
           Subscribe to newsletter
         </label>
       </form>
       <div className="toolbar">
-        <button type="button" onClick={() => void persist()} disabled={saving}>
+        <button
+          type="button"
+          onClick={() => void persist()}
+          disabled={saving || !dirty}
+        >
           {saving ? 'Saving…' : 'Save to DynamoDB'}
         </button>
         <button
@@ -63,6 +76,7 @@ export function PreferencesPage() {
         >
           {hydrating ? 'Refetching…' : 'Refetch this page'}
         </button>
+        {dirty && <span className="badge badge-dirty">● Unsaved changes</span>}
         <span className="status">
           {savedAt
             ? `Saved at ${new Date(savedAt).toLocaleTimeString()}`

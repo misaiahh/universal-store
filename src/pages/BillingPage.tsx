@@ -3,18 +3,27 @@ import { useAppStore } from '../stores/appStore'
 
 // Billing page consumes only its own nested slice.
 export function BillingPage() {
-  const { form, setField, persist, saving, savedAt, hydrate, hydrating } =
-    useAppStore(
-      useShallow((s) => ({
-        form: s.billing.form,
-        setField: s.billing.setField,
-        persist: s.billing.persist,
-        saving: s.billing.saving,
-        savedAt: s.billing.savedAt,
-        hydrate: s.billing.hydrate,
-        hydrating: s.billing.hydrating,
-      })),
-    )
+  const {
+    form,
+    stage,
+    persist,
+    saving,
+    savedAt,
+    hydrate,
+    hydrating,
+    dirty,
+  } = useAppStore(
+    useShallow((s) => ({
+      form: s.billing.form,
+      stage: s.billing.stage,
+      persist: s.billing.persist,
+      saving: s.billing.saving,
+      savedAt: s.billing.savedAt,
+      hydrate: s.billing.hydrate,
+      hydrating: s.billing.hydrating,
+      dirty: s.billing.dirty,
+    })),
+  )
 
   return (
     <section className="card">
@@ -24,26 +33,30 @@ export function BillingPage() {
           Name on card
           <input
             value={form.cardName}
-            onChange={(e) => setField('cardName', e.target.value)}
+            onChange={(e) => stage('cardName', e.target.value)}
           />
         </label>
         <label>
           Card number
           <input
             value={form.cardNumber}
-            onChange={(e) => setField('cardNumber', e.target.value)}
+            onChange={(e) => stage('cardNumber', e.target.value)}
           />
         </label>
         <label>
           Billing ZIP
           <input
             value={form.billingZip}
-            onChange={(e) => setField('billingZip', e.target.value)}
+            onChange={(e) => stage('billingZip', e.target.value)}
           />
         </label>
       </form>
       <div className="toolbar">
-        <button type="button" onClick={() => void persist()} disabled={saving}>
+        <button
+          type="button"
+          onClick={() => void persist()}
+          disabled={saving || !dirty}
+        >
           {saving ? 'Saving…' : 'Save to DynamoDB'}
         </button>
         <button
@@ -53,6 +66,7 @@ export function BillingPage() {
         >
           {hydrating ? 'Refetching…' : 'Refetch this page'}
         </button>
+        {dirty && <span className="badge badge-dirty">● Unsaved changes</span>}
         <span className="status">
           {savedAt
             ? `Saved at ${new Date(savedAt).toLocaleTimeString()}`
