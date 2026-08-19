@@ -1,6 +1,11 @@
 import { makeExecutableSchema } from '@graphql-tools/schema'
 import { GraphQLScalarType, Kind, type ValueNode } from 'graphql'
-import { PAGE_KEYS, type PageKey, type PageFormData } from '../stores/pages'
+import {
+  PAGE_KEYS,
+  type PageKey,
+  type PageFormData,
+  type ProfileActivity,
+} from '../stores/pages'
 
 // Executable GraphQL schema standing in for the DynamoDB backend. Apollo Client
 // runs real queries/mutations against this via SchemaLink — no network server.
@@ -36,6 +41,37 @@ const SEED: { [K in PageKey]: PageFormData[K] } = {
     newsletter: true,
     language: 'en',
   },
+}
+
+// Seed for the profile activity feed. Deeply nested on purpose (summary object +
+// events array, each event with its own metadata object) so the direct-query
+// examples in profileSlice have a realistic frozen tree to clone or return.
+const ACTIVITY_SEED: ProfileActivity = {
+  summary: {
+    totalEvents: 3,
+    lastSeen: '2025-11-02T09:15:00.000Z',
+    topKind: 'login',
+  },
+  events: [
+    {
+      id: 'evt-1',
+      kind: 'login',
+      at: '2025-11-02T09:15:00.000Z',
+      metadata: { ip: '10.0.0.1', device: 'MacBook Pro', location: 'London' },
+    },
+    {
+      id: 'evt-2',
+      kind: 'profile_update',
+      at: '2025-10-30T14:02:00.000Z',
+      metadata: { ip: '10.0.0.2', device: 'iPhone', location: 'London' },
+    },
+    {
+      id: 'evt-3',
+      kind: 'login',
+      at: '2025-10-28T08:41:00.000Z',
+      metadata: { ip: '10.0.0.1', device: 'MacBook Pro', location: 'Cambridge' },
+    },
+  ],
 }
 
 // Parse a GraphQL AST literal (used when `form` is inlined in a query document)
@@ -86,11 +122,41 @@ const typeDefs = /* GraphQL */ `
     updatedAt: String!
   }
 
+  # Deeply nested read-only enrichment for the profile page. Modelled with real
+  # GraphQL types (not the JSON scalar) so the query result is a genuine nested
+  # tree — the shape the direct-query slice actions must clone before immer can
+  # own it.
+  type ActivityMetadata {
+    ip: String!
+    device: String!
+    location: String!
+  }
+
+  type ActivityEvent {
+    id: String!
+    kind: String!
+    at: String!
+    metadata: ActivityMetadata!
+  }
+
+  type ActivitySummary {
+    totalEvents: Int!
+    lastSeen: String!
+    topKind: String!
+  }
+
+  type ProfileActivity {
+    summary: ActivitySummary!
+    events: [ActivityEvent!]!
+  }
+
   type Query {
     # Query(pk = sessionId): every page item for a session, one per sort key.
     pagesBySession(sessionId: String!): [PageItem!]!
     # GetItem(pk = sessionId, sk = pageKey): a single page's item.
     pageForm(sessionId: String!, pageKey: String!): PageItem!
+    # Direct enrichment read for the profile page: a nested activity feed.
+    profileActivity(sessionId: String!): ProfileActivity!
   }
 
   type Mutation {
@@ -117,6 +183,9 @@ const resolvers = {
       _: unknown,
       args: { sessionId: string; pageKey: PageKey },
     ) => item(args.sessionId, args.pageKey),
+    // Returns the seeded activity tree. SchemaLink hands this to Apollo, whose
+    // InMemoryCache deep-freezes it before the store ever sees it.
+    profileActivity: (): ProfileActivity => ACTIVITY_SEED,
   },
   Mutation: {
     putPageForm: (

@@ -1,7 +1,8 @@
 import type { StateCreator } from 'zustand'
 import type { AppStore } from '../appStore'
-import type { ProfileForm } from '../pages'
+import type { ProfileForm, ProfileActivity } from '../pages'
 import { getPageForm, putPageForm } from '../../api/dynamoClient'
+import { queryProfileActivity } from '../../api/profileActivity'
 import { deepEqual } from '../deepEqual'
 
 // Profile page slice — NESTED under the `profile` key on the store. It owns:
@@ -41,6 +42,30 @@ export interface ProfileSlice {
   hydrate: () => Promise<void>
   persist: () => Promise<void>
   reset: () => void
+
+  // --- Direct @apollo/client query examples (read-only profile enrichment) ---
+  // These are NOT part of the soft/hard/dirty form model above; they demonstrate
+  // the two ways a GraphQL query is wired against an immer store. Both hit the
+  // same `profileActivity` query, whose result Apollo deep-FREEZES.
+  //
+  // The returned tree being frozen is the whole point: immer's `set` can store a
+  // frozen object as an opaque leaf, but the moment a later recipe tries to MUTATE
+  // that stored subtree in place (e.g. push an event, edit metadata) immer throws,
+  // because it never took ownership of a frozen foreign object. So anything we
+  // want to keep in the draft AND remain mutable must be structuredClone'd first.
+  activity: ProfileActivity | null
+  activityLoading: boolean
+  activityError: string | null
+  // Type 1 — LAZY, side-effecting. A component/hook triggers it; it drives
+  // activityLoading/activityError and writes the result INTO the store. The
+  // Apollo result is structuredClone'd so immer owns a mutable copy that future
+  // `stage`-style recipes can safely mutate. Returns nothing.
+  loadActivity: () => Promise<void>
+  // Type 2 — RETURNS DIRECTLY. A pure async read: it performs the query and hands
+  // the (frozen) Apollo result straight back to the caller. It touches the store
+  // not at all, so there is no immer interaction and nothing to clone here —
+  // the caller owns whatever it does with the frozen tree.
+  fetchActivity: () => Promise<ProfileActivity>
 }
 
 const emptyForm: ProfileForm = {
@@ -62,6 +87,9 @@ export const createProfileSlice: StateCreator<
   saving: false,
   savedAt: null,
   hydrating: false,
+  activity: null,
+  activityLoading: false,
+  activityError: null,
 
   // Single immer-backed soft-write path. Either set one top-level field, or pass
   // a recipe to mutate the draft form directly (nested objects, arrays,
@@ -138,5 +166,45 @@ export const createProfileSlice: StateCreator<
       s.profile.saving = false
       s.profile.savedAt = null
       s.profile.hydrating = false
+      s.profile.activity = null
+      s.profile.activityLoading = false
+      s.profile.activityError = null
     }),
+
+  // Type 1 — lazy query that writes into the store. Loading/error live in the
+  // slice, and the result is stored for any component reading `profile.activity`.
+  // The critical line is the structuredClone: `data` is Apollo-frozen, and
+  // assigning it straight into the immer draft would leave a frozen subtree that
+  // any later mutating recipe could not touch. Cloning hands immer a plain,
+  // mutable copy it fully owns.
+  loadActivity: async () => {
+    if (get().profile.activityLoading) return
+    set((s) => {
+      s.profile.activityLoading = true
+      s.profile.activityError = null
+    })
+    try {
+      const data = await queryProfileActivity(get().session.sessionId)
+      set((s) => {
+        s.profile.activity = structuredClone(data)
+      })
+    } catch (err) {
+      set((s) => {
+        s.profile.activityError =
+          err instanceof Error ? err.message : String(err)
+      })
+    } finally {
+      set((s) => {
+        s.profile.activityLoading = false
+      })
+    }
+  },
+
+  // Type 2 — pure query that returns its result. No `set`, no loading/error
+  // tracking, nothing stored: the frozen Apollo tree is handed straight back for
+  // the caller to consume. Because it never enters an immer draft, there is no
+  // clone and no freezing conflict — the store is entirely uninvolved.
+  fetchActivity: async () => {
+    return await queryProfileActivity(get().session.sessionId)
+  },
 })

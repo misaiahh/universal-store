@@ -60,4 +60,34 @@ export interface PageFormData {
   preferences: PreferencesForm
 }
 
+// Read-only enrichment for the profile page, fetched via a direct @apollo/client
+// query (NOT part of the DynamoDB single-table form model). It is intentionally
+// DEEPLY NESTED — a summary object plus an array of events each carrying its own
+// metadata object — so it exercises the immer-vs-frozen-Apollo-result issue: the
+// query result is a frozen, deeply nested tree, and immer can only take
+// ownership of a structuredClone of it.
+export interface ActivityMetadata {
+  ip: string
+  device: string
+  location: string
+}
+
+export interface ActivityEvent {
+  id: string
+  kind: string
+  at: string
+  metadata: ActivityMetadata
+}
+
+export interface ActivitySummary {
+  totalEvents: number
+  lastSeen: string
+  topKind: string
+}
+
+export interface ProfileActivity {
+  summary: ActivitySummary
+  events: ActivityEvent[]
+}
+
 

@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, vi } from 'vitest'
+// Register jest-dom's custom matchers (toBeInTheDocument, toBeDisabled, etc.) on
+// expect for the component tests. Side-effect import; no symbols used directly.
+import '@testing-library/jest-dom/vitest'
+import { cleanup } from '@testing-library/react'
 
 // Mock the async data layer GLOBALLY, here in the setup file, rather than in each
 // test. This is REQUIRED, not just convenient: setup.ts imports the store below,
@@ -11,6 +15,12 @@ vi.mock('../api/dynamoClient', () => ({
   getPageForm: vi.fn(),
   putPageForm: vi.fn(),
   queryPagesByUser: vi.fn(),
+}))
+
+// Same reasoning for the direct-query module behind profileSlice's activity
+// actions: it is loaded transitively during setup, so its mock must live here.
+vi.mock('../api/profileActivity', () => ({
+  queryProfileActivity: vi.fn(),
 }))
 
 import { resetAppStore } from './storeTestUtils'
@@ -29,8 +39,10 @@ beforeEach(() => {
   resetAppStore()
 })
 
-// Clear again afterwards so a test's writes never bleed into unrelated code that
-// reads storage during teardown.
+// Unmount any React trees rendered by a component test, and clear storage again
+// so a test's writes never bleed into unrelated code that reads storage during
+// teardown. cleanup() is a no-op for the slice/store tests that render nothing.
 afterEach(() => {
+  cleanup()
   sessionStorage.clear()
 })
