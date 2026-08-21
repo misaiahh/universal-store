@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useAppStore, appStore } from './appStore'
+import { useAppStore } from './appStore'
 import { pageState, seedSession, seedPageClean } from '../test/storeTestUtils'
 import { putPageForm } from '../api/dynamoClient'
-import type { CompanyForm } from './pages'
+import type { CompanyForm } from './slices/company/types'
 
 // dynamoClient is mocked globally in src/test/setup.ts.
 
@@ -13,9 +13,9 @@ const COMPANY: CompanyForm = {
 }
 
 // These tests exercise the store the way components/hooks do — through the
-// vanilla store API (subscribe + selectors) and the generated appStore.use.*
-// selectors — without rendering React. This is the "no Testing Library" seam:
-// selector identity/equality is what drives component re-renders in the app.
+// vanilla store API (subscribe + selectors) — without rendering React. This is
+// the "no Testing Library" seam: selector identity/equality is what drives
+// component re-renders in the app.
 describe('store interaction (selectors + subscriptions)', () => {
   beforeEach(() => {
     seedSession()
@@ -37,20 +37,12 @@ describe('store interaction (selectors + subscriptions)', () => {
     })
 
     it('a scoped selector reads the current field value', () => {
-      const select = () => useAppStore.getState().company.form.companyName
+      const select = () => useAppStore.getState().company.companyName
       expect(select()).toBe('Analytical Engines Ltd')
 
       pageState('company').stage('companyName', 'Babbage & Co')
 
       expect(select()).toBe('Babbage & Co')
-    })
-  })
-
-  describe('generated appStore.use.* selectors', () => {
-    it('exposes one selector hook per top-level store key', () => {
-      // createSelectors builds appStore.use.<key>; the company slice is one key.
-      expect(typeof appStore.use.company).toBe('function')
-      expect(typeof appStore.use.session).toBe('function')
     })
   })
 
@@ -85,7 +77,7 @@ describe('store interaction (selectors + subscriptions)', () => {
       // Simulate the documented pattern: drive billing from elsewhere.
       useAppStore.getState().billing.stage('billingZip', '00100')
 
-      expect(pageState('billing').form.billingZip).toBe('00100')
+      expect(pageState('billing').billingZip).toBe('00100')
       expect(pageState('billing').dirty).toBe(true)
       // Company (the "current" page) is untouched.
       expect(pageState('company').dirty).toBe(false)

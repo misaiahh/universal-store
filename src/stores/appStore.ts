@@ -2,14 +2,13 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import createDeepMerge from '@fastify/deepmerge'
-import { createSelectors } from './createSelectors'
-import { createProfileSlice, type ProfileSlice } from './slices/profileSlice'
-import { createCompanySlice, type CompanySlice } from './slices/companySlice'
-import { createBillingSlice, type BillingSlice } from './slices/billingSlice'
+import { createProfileSlice, type ProfileSlice } from './slices/profile/slice'
+import { createCompanySlice, type CompanySlice } from './slices/company/slice'
+import { createBillingSlice, type BillingSlice } from './slices/billing/slice'
 import {
   createPreferencesSlice,
   type PreferencesSlice,
-} from './slices/preferencesSlice'
+} from './slices/preferences/slice'
 import {
   createHydrationSlice,
   type HydrationSlice,
@@ -42,8 +41,8 @@ export type AppStore = HydrationSlice & {
 // Deep merge for persist's rehydration. With NESTED slices, persist's default
 // shallow merge would replace a whole slice object with the persisted one and
 // drop that slice's functions (persist/stage/hydrate). deepMerge(current,
-// persisted) overlays only the persisted DATA (each slice's `form`) on top of
-// the freshly-created slices, keeping every action intact after a reload.
+// persisted) overlays only the persisted DATA (each slice's flat form fields) on
+// top of the freshly-created slices, keeping every action intact after a reload.
 //
 // ARRAYS are REPLACED, not concatenated (fastify's default). A persisted form
 // array (e.g. profile.phones) is the authoritative soft value; concatenating it
@@ -57,33 +56,38 @@ const deepMerge = createDeepMerge({
       clone(source),
 })
 
-// Persist only each slice's SOFT `form` (data) plus the session's `sessionId`.
-// The HARD snapshot is deliberately NOT persisted (it's the last-known DynamoDB
-// value, re-established on the next hydrate). Transient status (saving/savedAt/
-// dirty) and all functions are omitted, so sessionStorage holds pure soft form
-// values keyed by the persisted sessionId.
+// Persist only each slice's SOFT form fields (data) plus the session's
+// `sessionId`. Each page slice owns its persisted shape via its own
+// `partialize()`, which returns its flat soft fields as a whole-form object that
+// deepMerge overlays back onto the slice root on rehydration. The HARD snapshot
+// is deliberately NOT persisted (it's the last-known DynamoDB value, re-
+// established on the next hydrate). Transient status (saving/savedAt/dirty) and
+// all functions are omitted, so sessionStorage holds pure soft form values
+// keyed by the persisted sessionId.
 function partialize(state: AppStore) {
   return {
     session: { sessionId: state.session.sessionId },
-    profile: { form: state.profile.form },
-    company: { form: state.company.form },
-    billing: { form: state.billing.form },
-    preferences: { form: state.preferences.form },
+    profile: state.profile.partialize(),
+    company: state.company.partialize(),
+    billing: state.billing.partialize(),
+    preferences: state.preferences.partialize(),
   }
 }
 
-// After a refresh the SOFT form is restored from sessionStorage but HARD is not
-// persisted, so it would default to emptyForm and wrongly flag the page dirty.
-// Mirror each restored soft form into hard (and clear dirty) so a reloaded tab
-// starts clean — dirty only becomes meaningful again after the next hydrate or a
-// fresh edit. Runs generically over every page.
+// After a refresh the SOFT fields are restored from sessionStorage but HARD is
+// not persisted, so it would default to emptyForm and wrongly flag the page
+// dirty. Mirror each restored soft form into hard (and clear dirty) so a
+// reloaded tab starts clean — dirty only becomes meaningful again after the next
+// hydrate or a fresh edit. Runs generically over every page.
 function reconcileHardWithSoft(state: AppStore) {
-  // A per-key switch (rather than a generic loop) keeps each applyForm call
-  // monomorphic so TypeScript can match each page's form type to its setter.
-  state.profile.applyForm(state.profile.form)
-  state.company.applyForm(state.company.form)
-  state.billing.applyForm(state.billing.form)
-  state.preferences.applyForm(state.preferences.form)
+  // A per-key call (rather than a generic loop) keeps each `apply` call
+  // monomorphic so TypeScript can match each page's form type to its setter. Each
+  // slice's partialize() returns its soft fields, which become the hard baseline,
+  // leaving each page clean.
+  state.profile.apply(state.profile.partialize())
+  state.company.apply(state.company.partialize())
+  state.billing.apply(state.billing.partialize())
+  state.preferences.apply(state.preferences.partialize())
 }
 
 // persist -> sessionStorage. Every page's form values survive a tab refresh;
@@ -129,6 +133,3 @@ export const useAppStore = create<AppStore>()(
 // for the case where there was NO persisted state at all (onRehydrateStorage's
 // state arg can be undefined): it mints the very first sessionId.
 useAppStore.getState().session.ensureSession()
-
-// Auto-generated per-key selectors: appStore.use.profile(), etc.
-export const appStore = createSelectors(useAppStore)

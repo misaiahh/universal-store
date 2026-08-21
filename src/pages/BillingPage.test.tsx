@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithStore, screen, fireEvent } from '../test/renderWithStore'
 import { seedSession, seedPageClean, pageState } from '../test/storeTestUtils'
 import { BillingPage } from './BillingPage'
-import type { BillingForm } from '../stores/pages'
+import type { BillingForm } from '../stores/slices/billing/types'
 // dynamoClient is mocked globally in src/test/setup.ts.
 import { putPageForm } from '../api/dynamoClient'
 
@@ -40,7 +40,7 @@ describe('<BillingPage />', () => {
       target: { value: '00100' },
     })
 
-    expect(pageState('billing').form.billingZip).toBe('00100')
+    expect(pageState('billing').billingZip).toBe('00100')
     expect(pageState('billing').dirty).toBe(true)
     expect(screen.getByText('● Unsaved changes')).toBeInTheDocument()
     expect(

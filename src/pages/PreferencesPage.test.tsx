@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithStore, screen, fireEvent } from '../test/renderWithStore'
 import { seedSession, seedPageClean, pageState } from '../test/storeTestUtils'
 import { PreferencesPage } from './PreferencesPage'
-import type { PreferencesForm } from '../stores/pages'
+import type { PreferencesForm } from '../stores/slices/preferences/types'
 // dynamoClient is mocked globally in src/test/setup.ts.
 import { putPageForm } from '../api/dynamoClient'
 
@@ -35,7 +35,7 @@ describe('<PreferencesPage />', () => {
       target: { value: 'fr' },
     })
 
-    expect(pageState('preferences').form.language).toBe('fr')
+    expect(pageState('preferences').language).toBe('fr')
     expect(pageState('preferences').dirty).toBe(true)
     expect(screen.getByText('● Unsaved changes')).toBeInTheDocument()
   })
@@ -45,7 +45,7 @@ describe('<PreferencesPage />', () => {
 
     fireEvent.click(screen.getByLabelText('Subscribe to newsletter'))
 
-    expect(pageState('preferences').form.newsletter).toBe(false)
+    expect(pageState('preferences').newsletter).toBe(false)
     expect(pageState('preferences').dirty).toBe(true)
     expect(
       screen.getByLabelText('Subscribe to newsletter'),

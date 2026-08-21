@@ -1,11 +1,7 @@
 import { makeExecutableSchema } from '@graphql-tools/schema'
 import { GraphQLScalarType, Kind, type ValueNode } from 'graphql'
-import {
-  PAGE_KEYS,
-  type PageKey,
-  type PageFormData,
-  type ProfileActivity,
-} from '../stores/pages'
+import { PAGE_KEYS, type PageKey, type PageFormData } from '../stores/pages'
+import type { ProfileActivity } from '../stores/slices/profile/types'
 
 // Executable GraphQL schema standing in for the DynamoDB backend. Apollo Client
 // runs real queries/mutations against this via SchemaLink — no network server.

@@ -5,7 +5,7 @@ import { queryPagesByUser } from '../../api/dynamoClient'
 // Top-level (NOT nested) hydration state + action. `hydrate` is the single entry
 // point that loads EVERY page at once: it queries DynamoDB for all page items
 // (one per sort key, keyed by the current session.sessionId) and fans each item
-// into the owning nested slice via `applyForm` (a plain setter). For refetching
+// into the owning nested slice via `apply` (a plain setter). For refetching
 // a SINGLE page, call that page's own async `slice.hydrate()` instead.
 export interface HydrationSlice {
   hydrating: boolean
@@ -38,16 +38,16 @@ export const createHydrationSlice: StateCreator<
       for (const item of items) {
         switch (item.sk) {
           case 'profile':
-            get().profile.applyForm(item.form)
+            get().profile.apply(item.form)
             break
           case 'company':
-            get().company.applyForm(item.form)
+            get().company.apply(item.form)
             break
           case 'billing':
-            get().billing.applyForm(item.form)
+            get().billing.apply(item.form)
             break
           case 'preferences':
-            get().preferences.applyForm(item.form)
+            get().preferences.apply(item.form)
             break
           default: {
             const _exhaustive: never = item

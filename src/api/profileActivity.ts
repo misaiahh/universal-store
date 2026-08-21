@@ -1,5 +1,5 @@
 import { gql } from '@apollo/client'
-import type { ProfileActivity } from '../stores/pages'
+import type { ProfileActivity } from '../stores/slices/profile/types'
 import { apolloClient } from './apolloClient'
 
 // Direct @apollo/client read of the profile activity feed. This is deliberately

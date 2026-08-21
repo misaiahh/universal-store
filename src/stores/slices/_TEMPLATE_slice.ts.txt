@@ -1,0 +1,252 @@
+// =============================================================================
+// PAGE SLICE TEMPLATE  —  A FOLDER, NOT A SINGLE FILE.
+// =============================================================================
+// This is a PATTERN, not a thing to reproduce literally. Do NOT copy the
+// existing example pages (profile / company / billing / preferences) or their
+// seed data (Ada Lovelace, "Analytical Engines Ltd", 4242 4242 ...). Use YOUR
+// OWN page name and YOUR OWN form fields.
+//
+// Each page slice is its OWN FOLDER under src/stores/slices/{{name}}/ mirroring
+// the company/ slice. Copy that folder as your starting point, then replace
+// every token:
+//        {{Name}}   PascalCase page name        e.g. Invoice  -> InvoiceForm, InvoiceSlice
+//        {{name}}   lowercase key (the PageKey)  e.g. invoice  -> s.invoice.number
+//      {{Name}} and {{name}} must be the SAME word, only cased differently.
+//
+// FOLDER LAYOUT:
+//   src/stores/slices/{{name}}/
+//     types.ts            {{Name}}Form (OWNED here) + {{Name}}Slice shape
+//     constants.ts        emptyForm: {{Name}}Form
+//     slice.ts            wiring only: initial state + action factory calls
+//     actions/types.ts    {{Name}}Set / {{Name}}Get (derived set/get types)
+//     actions/stage.ts    Stage type + createStage
+//     actions/apply.ts    createApply
+//     actions/hydrate.ts  createHydrate
+//     actions/persist.ts  createPersist
+//     actions/reset.ts    createReset
+//     actions/partialize.ts  createPartialize (slice-owned persisted shape)
+//
+// SHAPE: the SOFT form fields live FLAT on the slice root (s.{{name}}.someField),
+// spread from {{Name}}Form via `extends`. `hard` stays as ONE nested object — the
+// last-known DynamoDB value AND the baseline `dirty` compares against. There is
+// NO gatherForm/spreadForm helper: each action spells out its fields inline (the
+// field list below), so a field added to {{Name}}Form makes TypeScript flag every
+// action that must be updated.
+//
+// Keep the structure/verbs identical (the flat form fields, hard, dirty, saving,
+// savedAt, hydrating, stage, apply, hydrate, persist, reset, partialize). Only
+// the tokens and the field list change. Below is one file per section, showing
+// the fixed pattern for a two-field form (`fieldA: string`, `fieldB: number`).
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// types.ts — {{Name}}Form is OWNED here (pages.ts imports it for PageFormData).
+// ---------------------------------------------------------------------------
+import type { Stage } from './actions/stage'
+
+export interface {{Name}}Form {
+  fieldA: string
+  fieldB: number
+}
+
+export interface {{Name}}Slice extends {{Name}}Form {
+  hard: {{Name}}Form
+  dirty: boolean
+  saving: boolean
+  savedAt: string | null
+  hydrating: boolean
+  stage: Stage
+  apply: (form: {{Name}}Form) => void
+  hydrate: () => Promise<void>
+  persist: () => Promise<void>
+  reset: () => void
+  // Slice-owned persisted shape: returns the flat SOFT fields as a whole form so
+  // the root store can persist/reconcile without knowing the field layout.
+  partialize: () => {{Name}}Form
+}
+
+// ---------------------------------------------------------------------------
+// constants.ts — same keys as {{Name}}Form, each set to its empty default.
+// ---------------------------------------------------------------------------
+import type { {{Name}}Form } from './types'
+export const emptyForm: {{Name}}Form = {
+  fieldA: '',
+  fieldB: 0,
+}
+
+// ---------------------------------------------------------------------------
+// actions/types.ts — the exact set/get the slice receives.
+// ---------------------------------------------------------------------------
+import type { StateCreator } from 'zustand'
+import type { AppStore } from '../../../appStore'
+type {{Name}}StateCreator = StateCreator<
+  AppStore,
+  [['zustand/immer', never]],
+  [],
+  unknown
+>
+export type {{Name}}Set = Parameters<{{Name}}StateCreator>[0]
+export type {{Name}}Get = Parameters<{{Name}}StateCreator>[1]
+
+// ---------------------------------------------------------------------------
+// actions/stage.ts — single soft-write path; recompute dirty against hard.
+// ---------------------------------------------------------------------------
+import type { {{Name}}Form } from '../types'
+import { deepEqual } from '../../../deepEqual'
+import type { {{Name}}Set } from './types'
+export interface Stage {
+  <K extends keyof {{Name}}Form>(key: K, value: {{Name}}Form[K]): void
+  (recipe: (draft: {{Name}}Form) => void): void
+}
+export function createStage(set: {{Name}}Set): Stage {
+  return (
+    keyOrRecipe: keyof {{Name}}Form | ((draft: {{Name}}Form) => void),
+    value?: {{Name}}Form[keyof {{Name}}Form],
+  ) =>
+    set((s) => {
+      if (typeof keyOrRecipe === 'function') {
+        keyOrRecipe(s.{{name}} as unknown as {{Name}}Form)
+      } else {
+        ;(s.{{name}} as Record<string, unknown>)[keyOrRecipe] = value
+      }
+      const soft: {{Name}}Form = {
+        fieldA: s.{{name}}.fieldA,
+        fieldB: s.{{name}}.fieldB,
+      }
+      s.{{name}}.dirty = !deepEqual(soft, s.{{name}}.hard)
+    })
+}
+
+// ---------------------------------------------------------------------------
+// actions/apply.ts — loaded value IS the hard baseline, so the page is clean.
+// ---------------------------------------------------------------------------
+export function createApply(set: {{Name}}Set): (form: {{Name}}Form) => void {
+  return (form) =>
+    set((s) => {
+      s.{{name}}.fieldA = form.fieldA
+      s.{{name}}.fieldB = form.fieldB
+      s.{{name}}.hard = form
+      s.{{name}}.dirty = false
+    })
+}
+
+// ---------------------------------------------------------------------------
+// actions/hydrate.ts — refetch JUST this page; fetched value = soft = hard.
+// ---------------------------------------------------------------------------
+import { getPageForm } from '../../../../api/dynamoClient'
+export function createHydrate(
+  set: {{Name}}Set,
+  get: {{Name}}Get,
+): () => Promise<void> {
+  return async () => {
+    set((s) => {
+      s.{{name}}.hydrating = true
+    })
+    try {
+      const item = await getPageForm(get().session.sessionId, '{{name}}')
+      set((s) => {
+        s.{{name}}.fieldA = item.form.fieldA
+        s.{{name}}.fieldB = item.form.fieldB
+        s.{{name}}.hard = item.form
+        s.{{name}}.dirty = false
+      })
+    } finally {
+      set((s) => {
+        s.{{name}}.hydrating = false
+      })
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// actions/persist.ts — hard-save JUST this page; promote soft to hard.
+// ---------------------------------------------------------------------------
+import { putPageForm } from '../../../../api/dynamoClient'
+export function createPersist(
+  set: {{Name}}Set,
+  get: {{Name}}Get,
+): () => Promise<void> {
+  return async () => {
+    set((s) => {
+      s.{{name}}.saving = true
+    })
+    try {
+      const p = get().{{name}}
+      const saved: {{Name}}Form = { fieldA: p.fieldA, fieldB: p.fieldB }
+      await putPageForm(get().session.sessionId, '{{name}}', saved)
+      set((s) => {
+        s.{{name}}.hard = saved
+        const soft: {{Name}}Form = {
+          fieldA: s.{{name}}.fieldA,
+          fieldB: s.{{name}}.fieldB,
+        }
+        s.{{name}}.dirty = !deepEqual(soft, saved)
+        s.{{name}}.savedAt = new Date().toISOString()
+      })
+    } finally {
+      set((s) => {
+        s.{{name}}.saving = false
+      })
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// actions/reset.ts — wipe soft + hard back to defaults, clear status.
+// ---------------------------------------------------------------------------
+import { emptyForm } from '../constants'
+export function createReset(set: {{Name}}Set): () => void {
+  return () =>
+    set((s) => {
+      s.{{name}}.fieldA = emptyForm.fieldA
+      s.{{name}}.fieldB = emptyForm.fieldB
+      s.{{name}}.hard = emptyForm
+      s.{{name}}.dirty = false
+      s.{{name}}.saving = false
+      s.{{name}}.savedAt = null
+      s.{{name}}.hydrating = false
+    })
+}
+
+// ---------------------------------------------------------------------------
+// actions/partialize.ts — the slice's flat soft fields as a whole form.
+// ---------------------------------------------------------------------------
+export function createPartialize(get: {{Name}}Get): () => {{Name}}Form {
+  return () => {
+    const p = get().{{name}}
+    return { fieldA: p.fieldA, fieldB: p.fieldB }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// slice.ts — WIRING ONLY: initial state + action factory calls.
+// ---------------------------------------------------------------------------
+import { emptyForm } from './constants'
+import type { {{Name}}Slice } from './types'
+import { createStage } from './actions/stage'
+import { createApply } from './actions/apply'
+import { createHydrate } from './actions/hydrate'
+import { createPersist } from './actions/persist'
+import { createReset } from './actions/reset'
+import { createPartialize } from './actions/partialize'
+export type { {{Name}}Slice } from './types'
+export const create{{Name}}Slice: StateCreator<
+  AppStore,
+  [['zustand/immer', never]],
+  [],
+  {{Name}}Slice
+> = (set, get) => ({
+  ...emptyForm,
+  hard: emptyForm,
+  dirty: false,
+  saving: false,
+  savedAt: null,
+  hydrating: false,
+
+  stage: createStage(set),
+  apply: createApply(set),
+  hydrate: createHydrate(set, get),
+  persist: createPersist(set, get),
+  reset: createReset(set),
+  partialize: createPartialize(get),
+})

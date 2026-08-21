@@ -28,7 +28,7 @@ const ITEMS: AnyPageItem[] = [
 ]
 
 // Top-level hydrate() loads EVERY page at once and fans each item into the
-// owning nested slice via applyForm, leaving each page clean.
+// owning nested slice via apply, leaving each page clean.
 describe('hydrationSlice', () => {
   beforeEach(() => {
     seedSession()
@@ -40,9 +40,9 @@ describe('hydrationSlice', () => {
     await useAppStore.getState().hydrate()
 
     expect(queryPagesByUser).toHaveBeenCalledWith('test-session')
-    expect(pageState('profile').form.fullName).toBe('Ada')
+    expect(pageState('profile').fullName).toBe('Ada')
     expect(pageState('profile').dirty).toBe(false)
-    expect(pageState('company').form.companyName).toBe('Engines')
+    expect(pageState('company').companyName).toBe('Engines')
     expect(pageState('company').dirty).toBe(false)
     expect(useAppStore.getState().hydratedAt).not.toBeNull()
   })

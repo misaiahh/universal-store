@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithStore, screen, fireEvent } from '../test/renderWithStore'
 import { seedSession, seedPageClean, pageState } from '../test/storeTestUtils'
 import { CompanyPage } from './CompanyPage'
-import type { CompanyForm } from '../stores/pages'
+import type { CompanyForm } from '../stores/slices/company/types'
 // dynamoClient is mocked globally in src/test/setup.ts.
 import { getPageForm, putPageForm } from '../api/dynamoClient'
 
@@ -42,7 +42,7 @@ describe('<CompanyPage />', () => {
     })
 
     // Store received the staged edit...
-    expect(pageState('company').form.companyName).toBe('Babbage & Co')
+    expect(pageState('company').companyName).toBe('Babbage & Co')
     expect(pageState('company').dirty).toBe(true)
     // ...and the UI reflects it.
     expect(screen.getByText('● Unsaved changes')).toBeInTheDocument()

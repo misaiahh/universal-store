@@ -31,7 +31,7 @@ export function seedSession(id = 'test-session'): string {
   return id
 }
 
-// Seed a page's HARD baseline (last-known DynamoDB value) AND soft form to the
+// Seed a page's HARD baseline (last-known DynamoDB value) AND soft fields to the
 // same value, leaving the page clean (dirty = false) — exactly the state after a
 // successful hydrate. Use this to test that a subsequent edit flips dirty.
 export function seedPageClean<K extends PageKey>(
@@ -41,17 +41,32 @@ export function seedPageClean<K extends PageKey>(
   // Indexing the store by a generic page key yields a UNION of the four slice
   // types, and calling a method on that union collapses its parameter to an
   // intersection of every form shape. The public signature above already pins
-  // `form` to the correct page type, so narrow the slice to just the applyForm
+  // `form` to the correct page type, so narrow the slice to just the `apply`
   // we need for this key.
   const slice = useAppStore.getState()[page] as {
-    applyForm: (form: PageFormData[K]) => void
+    apply: (form: PageFormData[K]) => void
   }
-  slice.applyForm(form)
+  slice.apply(form)
 }
 
 // Read a page slice's current values without a React component.
 export function pageState<K extends PageKey>(page: K) {
   return useAppStore.getState()[page]
+}
+
+// Gather a page slice's flat SOFT fields back into a whole-form object, so tests
+// can assert against the full form shape (soft fields now live on the slice root
+// rather than under a `form` object). Uses the slice's `hard` object as the field
+// set — this test helper stays generic across pages, mirroring what each slice's
+// own partialize() returns.
+export function pageForm<K extends PageKey>(page: K): PageFormData[K] {
+  const slice = useAppStore.getState()[page] as unknown as Record<string, unknown>
+  const hard = slice.hard as Record<string, unknown>
+  const out = {} as Record<string, unknown>
+  for (const key of Object.keys(hard)) {
+    out[key] = slice[key]
+  }
+  return out as unknown as PageFormData[K]
 }
 
 // Convenience: the list of page keys, re-exported so tests don't import from two

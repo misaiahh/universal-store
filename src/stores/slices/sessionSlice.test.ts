@@ -41,7 +41,7 @@ describe('sessionSlice', () => {
       useAppStore.getState().session.setSessionId('session-b')
 
       expect(useAppStore.getState().session.sessionId).toBe('session-b')
-      expect(pageState('company').form.companyName).toBe('')
+      expect(pageState('company').companyName).toBe('')
       expect(pageState('company').dirty).toBe(false)
     })
 
@@ -54,7 +54,7 @@ describe('sessionSlice', () => {
 
       useAppStore.getState().session.setSessionId('session-a')
 
-      expect(pageState('company').form.companyName).toBe('Keep')
+      expect(pageState('company').companyName).toBe('Keep')
     })
   })
 
@@ -68,7 +68,7 @@ describe('sessionSlice', () => {
       useAppStore.getState().session.resetSession()
 
       expect(useAppStore.getState().session.sessionId).not.toBe('session-a')
-      expect(pageState('billing').form.cardName).toBe('')
+      expect(pageState('billing').cardName).toBe('')
     })
   })
 
@@ -81,8 +81,8 @@ describe('sessionSlice', () => {
 
       // Each page returns to its own empty-form defaults (preferences defaults
       // language to 'en', not '').
-      expect(pageState('preferences').form.language).toBe('en')
-      expect(pageState('profile').form.fullName).toBe('')
+      expect(pageState('preferences').language).toBe('en')
+      expect(pageState('profile').fullName).toBe('')
     })
   })
 })

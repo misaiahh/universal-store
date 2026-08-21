@@ -4,7 +4,9 @@ import { useAppStore } from '../stores/appStore'
 // Billing page consumes only its own nested slice.
 export function BillingPage() {
   const {
-    form,
+    cardName,
+    cardNumber,
+    billingZip,
     stage,
     persist,
     saving,
@@ -14,7 +16,9 @@ export function BillingPage() {
     dirty,
   } = useAppStore(
     useShallow((s) => ({
-      form: s.billing.form,
+      cardName: s.billing.cardName,
+      cardNumber: s.billing.cardNumber,
+      billingZip: s.billing.billingZip,
       stage: s.billing.stage,
       persist: s.billing.persist,
       saving: s.billing.saving,
@@ -32,21 +36,21 @@ export function BillingPage() {
         <label>
           Name on card
           <input
-            value={form.cardName}
+            value={cardName}
             onChange={(e) => stage('cardName', e.target.value)}
           />
         </label>
         <label>
           Card number
           <input
-            value={form.cardNumber}
+            value={cardNumber}
             onChange={(e) => stage('cardNumber', e.target.value)}
           />
         </label>
         <label>
           Billing ZIP
           <input
-            value={form.billingZip}
+            value={billingZip}
             onChange={(e) => stage('billingZip', e.target.value)}
           />
         </label>

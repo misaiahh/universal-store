@@ -4,7 +4,9 @@ import { useAppStore } from '../stores/appStore'
 // Company page consumes only its own nested slice.
 export function CompanyPage() {
   const {
-    form,
+    companyName,
+    industry,
+    employees,
     stage,
     persist,
     saving,
@@ -14,7 +16,9 @@ export function CompanyPage() {
     dirty,
   } = useAppStore(
     useShallow((s) => ({
-      form: s.company.form,
+      companyName: s.company.companyName,
+      industry: s.company.industry,
+      employees: s.company.employees,
       stage: s.company.stage,
       persist: s.company.persist,
       saving: s.company.saving,
@@ -32,14 +36,14 @@ export function CompanyPage() {
         <label>
           Company name
           <input
-            value={form.companyName}
+            value={companyName}
             onChange={(e) => stage('companyName', e.target.value)}
           />
         </label>
         <label>
           Industry
           <input
-            value={form.industry}
+            value={industry}
             onChange={(e) => stage('industry', e.target.value)}
           />
         </label>
@@ -48,7 +52,7 @@ export function CompanyPage() {
           <input
             type="number"
             min={0}
-            value={form.employees}
+            value={employees}
             onChange={(e) => stage('employees', Number(e.target.value))}
           />
         </label>

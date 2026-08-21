@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { pageState, seedSession, seedPageClean } from '../../test/storeTestUtils'
-import type { ProfileForm } from '../pages'
+import {
+  pageState,
+  pageForm,
+  seedSession,
+  seedPageClean,
+} from '../../../test/storeTestUtils'
+import type { ProfileForm } from './types'
 
 // dynamoClient is mocked globally in src/test/setup.ts; import the mocked fn to
 // stub its resolved value and assert the persist call.
-import { putPageForm } from '../../api/dynamoClient'
+import { putPageForm } from '../../../api/dynamoClient'
 
 const HARD: ProfileForm = {
   fullName: 'Ada Lovelace',
@@ -27,7 +32,7 @@ describe('profileSlice', () => {
   describe('stage(key, value) on top-level fields', () => {
     it('updates a primitive and flips dirty', () => {
       pageState('profile').stage('email', 'ada@analytical.uk')
-      expect(pageState('profile').form.email).toBe('ada@analytical.uk')
+      expect(pageState('profile').email).toBe('ada@analytical.uk')
       expect(pageState('profile').dirty).toBe(true)
     })
   })
@@ -37,7 +42,7 @@ describe('profileSlice', () => {
       pageState('profile').stage((d) => {
         d.address.city = 'Rome'
       })
-      expect(pageState('profile').form.address.city).toBe('Rome')
+      expect(pageState('profile').address.city).toBe('Rome')
       expect(pageState('profile').dirty).toBe(true)
     })
 
@@ -67,7 +72,7 @@ describe('profileSlice', () => {
         const phone = d.phones[0]
         if (phone) phone.number = '555-0000'
       })
-      expect(pageState('profile').form.phones[0].number).toBe('555-0000')
+      expect(pageState('profile').phones[0].number).toBe('555-0000')
       expect(pageState('profile').dirty).toBe(true)
     })
 
@@ -75,7 +80,7 @@ describe('profileSlice', () => {
       pageState('profile').stage((d) => {
         d.phones.push({ label: 'home', number: '555-0222' })
       })
-      expect(pageState('profile').form.phones).toHaveLength(3)
+      expect(pageState('profile').phones).toHaveLength(3)
       expect(pageState('profile').dirty).toBe(true)
     })
 
@@ -83,7 +88,7 @@ describe('profileSlice', () => {
       pageState('profile').stage((d) => {
         d.phones.splice(0, 1)
       })
-      expect(pageState('profile').form.phones).toEqual([
+      expect(pageState('profile').phones).toEqual([
         { label: 'work', number: '555-0199' },
       ])
       expect(pageState('profile').dirty).toBe(true)
@@ -108,7 +113,7 @@ describe('profileSlice', () => {
       pageState('profile').stage((d) => {
         d.phones.push({ label: 'home', number: '555-0222' })
       })
-      const saved = structuredClone(pageState('profile').form)
+      const saved = structuredClone(pageForm('profile'))
       vi.mocked(putPageForm).mockResolvedValue({
         pk: 'USER#test-session',
         sk: 'profile',

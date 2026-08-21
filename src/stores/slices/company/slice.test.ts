@@ -1,13 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useAppStore } from '../appStore'
-import { pageState, seedSession, seedPageClean } from '../../test/storeTestUtils'
-import type { CompanyForm } from '../pages'
+import { useAppStore } from '../../appStore'
+import {
+  pageState,
+  pageForm,
+  seedSession,
+  seedPageClean,
+} from '../../../test/storeTestUtils'
+import type { CompanyForm } from './types'
 
 // The async data layer is mocked GLOBALLY in src/test/setup.ts (it has to be —
 // the store is loaded transitively during setup, which caches dynamoClient and
 // makes a per-file vi.mock a no-op). We just import the mocked fns here to drive
 // per-test behaviour and assert calls; call history is cleared before each test.
-import { getPageForm, putPageForm } from '../../api/dynamoClient'
+import { getPageForm, putPageForm } from '../../../api/dynamoClient'
 
 const HARD: CompanyForm = {
   companyName: 'Analytical Engines Ltd',
@@ -29,7 +34,7 @@ describe('companySlice', () => {
 
       pageState('company').stage('companyName', 'Babbage & Co')
 
-      expect(pageState('company').form.companyName).toBe('Babbage & Co')
+      expect(pageState('company').companyName).toBe('Babbage & Co')
       expect(pageState('company').dirty).toBe(true)
     })
 
@@ -59,7 +64,7 @@ describe('companySlice', () => {
         d.employees = 7
       })
 
-      expect(pageState('company').form).toEqual({
+      expect(pageForm('company')).toEqual({
         companyName: 'Babbage & Co',
         industry: 'Computing',
         employees: 7,
@@ -112,7 +117,7 @@ describe('companySlice', () => {
       await pageState('company').hydrate()
 
       expect(getPageForm).toHaveBeenCalledWith('test-session', 'company')
-      expect(pageState('company').form).toEqual(server)
+      expect(pageForm('company')).toEqual(server)
       expect(pageState('company').hard).toEqual(server)
       expect(pageState('company').dirty).toBe(false)
     })
@@ -128,7 +133,7 @@ describe('companySlice', () => {
 
       pageState('company').reset()
 
-      expect(pageState('company').form).toEqual({
+      expect(pageForm('company')).toEqual({
         companyName: '',
         industry: '',
         employees: 0,

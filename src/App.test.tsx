@@ -3,7 +3,7 @@ import { renderWithStore, screen, fireEvent } from './test/renderWithStore'
 import { seedSession, seedPageClean, pageState } from './test/storeTestUtils'
 import { useAppStore } from './stores/appStore'
 import App from './App'
-import type { CompanyForm } from './stores/pages'
+import type { CompanyForm } from './stores/slices/company/types'
 // dynamoClient is mocked globally in src/test/setup.ts.
 import { queryPagesByUser } from './api/dynamoClient'
 
@@ -66,14 +66,14 @@ describe('<App />', () => {
     fireEvent.change(screen.getByLabelText('Company name'), {
       target: { value: 'Edited' },
     })
-    expect(pageState('company').form.companyName).toBe('Edited')
+    expect(pageState('company').companyName).toBe('Edited')
 
     fireEvent.click(
       screen.getByRole('button', { name: 'New session (wipes soft data)' }),
     )
 
     expect(useAppStore.getState().session.sessionId).not.toBe('session-a')
-    expect(pageState('company').form.companyName).toBe('')
+    expect(pageState('company').companyName).toBe('')
   })
 
   it('Switch sets a typed session id', () => {

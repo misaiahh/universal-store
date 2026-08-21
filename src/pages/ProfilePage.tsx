@@ -5,7 +5,10 @@ import { useAppStore } from '../stores/appStore'
 // component re-renders only when the profile slice's picked values change.
 export function ProfilePage() {
   const {
-    form,
+    fullName,
+    email,
+    address,
+    phones,
     stage,
     persist,
     saving,
@@ -15,7 +18,10 @@ export function ProfilePage() {
     dirty,
   } = useAppStore(
     useShallow((s) => ({
-      form: s.profile.form,
+      fullName: s.profile.fullName,
+      email: s.profile.email,
+      address: s.profile.address,
+      phones: s.profile.phones,
       stage: s.profile.stage,
       persist: s.profile.persist,
       saving: s.profile.saving,
@@ -33,7 +39,7 @@ export function ProfilePage() {
         <label>
           Full name
           <input
-            value={form.fullName}
+            value={fullName}
             onChange={(e) => stage('fullName', e.target.value)}
           />
         </label>
@@ -41,7 +47,7 @@ export function ProfilePage() {
           Email
           <input
             type="email"
-            value={form.email}
+            value={email}
             onChange={(e) => stage('email', e.target.value)}
           />
         </label>
@@ -51,7 +57,7 @@ export function ProfilePage() {
           <label>
             Street
             <input
-              value={form.address.street}
+              value={address.street}
               onChange={(e) =>
                 stage((d) => {
                   d.address.street = e.target.value
@@ -62,7 +68,7 @@ export function ProfilePage() {
           <label>
             City
             <input
-              value={form.address.city}
+              value={address.city}
               onChange={(e) =>
                 stage((d) => {
                   d.address.city = e.target.value
@@ -73,7 +79,7 @@ export function ProfilePage() {
           <label>
             ZIP
             <input
-              value={form.address.zip}
+              value={address.zip}
               onChange={(e) =>
                 stage((d) => {
                   d.address.zip = e.target.value
@@ -85,10 +91,10 @@ export function ProfilePage() {
 
         <fieldset className="group">
           <legend>Phones (array of objects)</legend>
-          {form.phones.length === 0 && (
+          {phones.length === 0 && (
             <p className="hint">No phones yet.</p>
           )}
-          {form.phones.map((phone, i) => (
+          {phones.map((phone, i) => (
             <div key={i} className="row">
               <label>
                 Label

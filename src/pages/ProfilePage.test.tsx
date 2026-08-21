@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithStore, screen, fireEvent } from '../test/renderWithStore'
 import { seedSession, seedPageClean, pageState } from '../test/storeTestUtils'
 import { ProfilePage } from './ProfilePage'
-import type { ProfileForm } from '../stores/pages'
+import type { ProfileForm } from '../stores/slices/profile/types'
 // dynamoClient is mocked globally in src/test/setup.ts.
 import { putPageForm } from '../api/dynamoClient'
 
@@ -43,7 +43,7 @@ describe('<ProfilePage />', () => {
       target: { value: 'Rome' },
     })
 
-    expect(pageState('profile').form.address.city).toBe('Rome')
+    expect(pageState('profile').address.city).toBe('Rome')
     expect(pageState('profile').dirty).toBe(true)
     expect(screen.getByText('● Unsaved changes')).toBeInTheDocument()
   })
@@ -55,7 +55,7 @@ describe('<ProfilePage />', () => {
       target: { value: '555-0000' },
     })
 
-    expect(pageState('profile').form.phones[0].number).toBe('555-0000')
+    expect(pageState('profile').phones[0].number).toBe('555-0000')
     expect(pageState('profile').dirty).toBe(true)
   })
 
@@ -64,7 +64,7 @@ describe('<ProfilePage />', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add phone' }))
 
-    expect(pageState('profile').form.phones).toHaveLength(3)
+    expect(pageState('profile').phones).toHaveLength(3)
     expect(screen.getAllByLabelText('Label')).toHaveLength(3)
     expect(pageState('profile').dirty).toBe(true)
   })
@@ -75,7 +75,7 @@ describe('<ProfilePage />', () => {
     // Two "Remove" buttons, one per phone row; remove the first.
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
 
-    expect(pageState('profile').form.phones).toEqual([
+    expect(pageState('profile').phones).toEqual([
       { label: 'work', number: '555-0199' },
     ])
     expect(screen.getAllByLabelText('Number')[0]).toHaveValue('555-0199')
@@ -88,7 +88,7 @@ describe('<ProfilePage />', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
 
-    expect(pageState('profile').form.phones).toHaveLength(0)
+    expect(pageState('profile').phones).toHaveLength(0)
     expect(screen.getByText('No phones yet.')).toBeInTheDocument()
   })
 

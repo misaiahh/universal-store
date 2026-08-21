@@ -4,7 +4,9 @@ import { useAppStore } from '../stores/appStore'
 // Preferences page consumes only its own nested slice.
 export function PreferencesPage() {
   const {
-    form,
+    theme,
+    language,
+    newsletter,
     stage,
     persist,
     saving,
@@ -14,7 +16,9 @@ export function PreferencesPage() {
     dirty,
   } = useAppStore(
     useShallow((s) => ({
-      form: s.preferences.form,
+      theme: s.preferences.theme,
+      language: s.preferences.language,
+      newsletter: s.preferences.newsletter,
       stage: s.preferences.stage,
       persist: s.preferences.persist,
       saving: s.preferences.saving,
@@ -32,7 +36,7 @@ export function PreferencesPage() {
         <label>
           Theme
           <select
-            value={form.theme}
+            value={theme}
             onChange={(e) =>
               stage('theme', e.target.value as 'light' | 'dark')
             }
@@ -44,7 +48,7 @@ export function PreferencesPage() {
         <label>
           Language
           <select
-            value={form.language}
+            value={language}
             onChange={(e) => stage('language', e.target.value)}
           >
             <option value="en">English</option>
@@ -55,7 +59,7 @@ export function PreferencesPage() {
         <label className="checkbox">
           <input
             type="checkbox"
-            checked={form.newsletter}
+            checked={newsletter}
             onChange={(e) => stage('newsletter', e.target.checked)}
           />
           Subscribe to newsletter
