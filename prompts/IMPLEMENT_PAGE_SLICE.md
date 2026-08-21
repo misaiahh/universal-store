@@ -4,6 +4,12 @@ You are building **ONE page slice folder**. Do this once per page — pick a sin
 page, complete it end to end (folder + wiring + test + green verification), then
 repeat this prompt for the next page. Do NOT try to scaffold all pages at once.
 
+> **Analyze first.** If you are migrating an existing context, run
+> `prompts/ANALYZE_EXISTING_CONTEXT.md` before this prompt and implement from its
+> plan: the persisted-vs-volatile classification, the Apollo-query→action map, and
+> the React-state-hook disposition list define this slice's `{{Name}}Form`, its
+> volatile fields, and its actions. Do not start here without that plan.
+
 ## Where this fits
 
 This is **step 4 of 4**:
