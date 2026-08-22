@@ -5,6 +5,24 @@ migrating** and produce a migration plan. This step decides what the slice looks
 like: which data persists, which is volatile, which async reads become actions,
 and which React-state logic disappears because the store now owns it.
 
+> ## ⛔ NON-NEGOTIABLE: selector discipline (read this first)
+>
+> A past migration took HOURS to fix because the component grabbed 10+ values in
+> ONE bare object-literal selector. Do not repeat it. These rules are mandatory,
+> not suggestions — see section 4 for full detail:
+>
+> 1. **Default to ATOMIC selectors** — one value per `useAppStore` call:
+>    `const x = useAppStore((s) => s.x)`.
+> 2. **NEVER** write `useAppStore((s) => ({ ...multiple fields... }))` without
+>    `useShallow`. A bare object/array-literal selector returns a new reference
+>    every render and re-renders on EVERY store change.
+> 3. **Group only when it clearly helps**, and then ONLY via
+>    `useAppStore(useShallow((s) => ({ ... })))`.
+> 4. **Self-check before finishing:** search your component for
+>    `useAppStore((s) => ({` and `useAppStore((s) => [` — every match MUST be
+>    wrapped in `useShallow`, or split into atomic selectors. A single unwrapped
+>    multi-value selector is a defect, not a style nit.
+
 ## Where this fits
 
 This is the **analysis step of Step 4** in `MIGRATE_TO_ZUSTAND.md`. Do it once per
@@ -91,13 +109,96 @@ remove local React state that the store now owns:
 Deliverable: a list of each React-state hook in the existing component → keep /
 remove / replace-with-store, with the store equivalent named.
 
+## 4. Select store values correctly (default atomic; group with `useShallow`)
+
+How the migrated component READS from the store is a **correctness requirement**,
+not a nicety — getting it wrong is what turned a past migration into an hours-long
+debugging session. Plan the selectors up front; never dump the slice into the
+component and destructure it.
+
+- **Default to atomic selectors — one value per hook call.** This is the safest,
+  best-performing pattern: the component re-renders only when THAT value changes.
+  ```ts
+  const fullName = useAppStore((s) => s.profile.fullName)
+  const dirty = useAppStore((s) => s.profile.dirty)
+  ```
+- **Never return a fresh object/array literal from a bare selector.** This
+  re-renders on EVERY store change because the returned reference is new each time:
+  ```ts
+  // ❌ new object every render → constant re-renders
+  const { a, b, c } = useAppStore((s) => ({ a: s.a, b: s.b, c: s.c }))
+  ```
+- **When grouping related values makes sense, wrap the selector in `useShallow`**
+  (`import { useShallow } from 'zustand/react/shallow'`). It shallow-compares the
+  returned object so the component only re-renders when one of the picked values
+  actually changes — this is the correct way to pull several fields/actions at once:
+  ```ts
+  const { companyName, industry, stage } = useAppStore(
+    useShallow((s) => ({
+      companyName: s.company.companyName,
+      industry: s.company.industry,
+      stage: s.company.stage,
+    })),
+  )
+  ```
+  The reference components (`src/pages/*.tsx`, `App.tsx`) already follow this —
+  match them.
+- **Actions are stable references**, so selecting them (atomically or inside a
+  `useShallow` group) never causes extra renders.
+
+Deliverable: for the migrated component, the list of selectors — which values are
+read atomically and which are grouped under a single `useShallow` call. Then run
+the self-check from the top of this prompt (grep for unwrapped multi-value
+selectors) before considering the component done.
+
+## 5. Plan cross-slice updates (one slice/view driving another)
+
+Many contexts don't stay in their own lane: changing session identity wipes every
+page, a bulk load applies data to every page, and a save on one page reads the
+current session. Whenever this context reads OR writes state that belongs to
+another slice, plan it now — the mechanism is fixed and simple.
+
+**The rule: call the other slice's ACTION via `get()` — never mutate its state
+directly.** Every slice lives on the one `AppStore`, and action factories are typed
+against the whole store (`StateCreator<AppStore, …>`), so `get()` sees every slice.
+
+- **Cross-slice WRITE → call the owning slice's action:**
+  ```ts
+  // ✅ inside an action: drive another slice through its own action
+  get().billing.stage('billingZip', zip)   // mark billing dirty…
+  get().billing.persist()                   // …and optionally commit it
+  ```
+  ```ts
+  // ❌ never reach into another slice's state and mutate it directly
+  set((s) => { s.billing.billingZip = zip })
+  ```
+  Direct mutation skips the owning slice's rules (recomputing `dirty`, updating
+  `hard`, clearing status), loses type-safety, and scatters logic. The reference
+  code always calls the action: `sessionSlice.wipeSoftData()` loops `PAGE_KEYS` and
+  calls `get()[key].reset()`; `hydrate()` fans out via `get().<page>.apply(form)`.
+- **Cross-slice READ → read data via `get()`, don't copy it into your slice:**
+  ```ts
+  // ✅ every page's persist/hydrate scopes itself to the current session
+  await putPageForm(get().session.sessionId, '<name>', saved)
+  ```
+- **View driving another slice** → the component just calls the action; the action
+  owns the fan-out. `App.tsx` calls `resetSession()`/`setSessionId()` (which wipe
+  all pages) and `hydrate()` (which applies all pages) — the component never
+  touches another slice's fields itself.
+
+Deliverable: for this context, a list of cross-slice touch-points — for each,
+which slice/action it targets and whether it's a read (`get().other.value`) or a
+write (`get().other.action()`).
+
 ## Output of this prompt
 
 A short written migration plan for THIS context:
 1. Data classification table (persisted vs volatile).
 2. Query/mutation → action mapping.
 3. React-state-hook disposition list.
-4. The resulting `{{Name}}Form` field list + any extra volatile slice fields and
+4. Selector plan: which values are read atomically vs. grouped under `useShallow`.
+5. Cross-slice touch-points: each other-slice read/write and the action it targets.
+6. The resulting `{{Name}}Form` field list + any extra volatile slice fields and
    auxiliary action files.
 
 Hand this plan to `IMPLEMENT_PAGE_SLICE.md` (and its tests). If any field's bucket

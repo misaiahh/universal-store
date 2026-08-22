@@ -79,6 +79,27 @@ profile slice's `loadActivity`/`fetchActivity`), add matching `actions/*.ts` fil
 and own any new types in this slice's `types.ts`. Remember Apollo results are
 deep-frozen — `structuredClone` before storing anything in immer.
 
+## Touching another slice — call its action, never mutate it
+
+If an action here must read or drive ANOTHER slice, do it through `get()`, which is
+typed against the whole `AppStore` (that's why `actions/types.ts` derives from
+`StateCreator<AppStore, …>`):
+
+- **READ another slice's data** with `get().<other>.<value>` — e.g. `persist`/
+  `hydrate` scope to `get().session.sessionId`. Read it at call time; do not copy
+  it into this slice's state.
+- **WRITE another slice by calling its ACTION**, never by mutating its fields:
+  ```ts
+  get().billing.stage('billingZip', zip)   // ✅ drive billing through its action
+  // ❌ set((s) => { s.billing.billingZip = zip })  — skips billing's dirty/hard rules
+  ```
+  The reference orchestrators do exactly this: `sessionSlice.wipeSoftData()` calls
+  `get()[key].reset()`; `hydrate()` calls `get().<page>.apply(form)`.
+
+A view that needs to drive another slice does the same indirectly — it calls one
+action (e.g. `resetSession()`, `hydrate()`) and lets THAT action own the fan-out;
+the component never reaches into another slice's fields.
+
 ## Wire the page in (see docs/ADD_A_PAGE.md for the full checklist)
 
 1. `pages.ts` — add the key to `PAGE_KEYS`; import `{{Name}}Form` and add it to

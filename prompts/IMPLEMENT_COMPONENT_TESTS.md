@@ -23,7 +23,10 @@ Study the reference tests and what they render:
   `<select>`, checkbox), and `src/App.test.tsx` (the shell: tab switching, dirty
   summary/dots, session controls, hydrate-all).
 - The corresponding page components (e.g. `src/pages/CompanyPage.tsx`, `App.tsx`)
-  to see how they read via `useAppStore((s) => s.<page>)` and call actions.
+  to see how they read the store: **atomic selectors by default**
+  (`const x = useAppStore((s) => s.<page>.<field>)`) and **`useShallow` for grouped
+  reads** (`useAppStore(useShallow((s) => ({ ... })))`) — never a bare
+  object-literal selector.
 - The harness: `src/test/renderWithStore.ts`, `src/test/setup.ts`,
   `src/test/storeTestUtils.ts`.
 
@@ -87,6 +90,11 @@ A component test's value is proving the wiring in both directions:
   post-await UI synchronously.
 - Match the reference style and comment density. Do NOT add a Provider wrapper, a
   second store, or user-event.
+- **Selector discipline (non-negotiable):** the component under test must read the
+  store with **atomic selectors** by default, and any multi-value read must use
+  **`useShallow`** — never a bare `useAppStore((s) => ({ ... }))`. If the component
+  you're testing violates this, fix the component; a past migration lost hours to
+  unwrapped multi-value selectors.
 
 ## Verify
 

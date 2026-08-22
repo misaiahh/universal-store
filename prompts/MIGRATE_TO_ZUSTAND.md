@@ -34,6 +34,19 @@ app's reality disagree, the app wins.
   each slice's own `<Name>Form`.
 - **Single-file cross-cutting slices**: `sessionSlice.ts` (identity + wipe-on-
   change) and `hydrationSlice.ts` (bulk load + exhaustive fan-out).
+- **Cross-slice updates**: one slice/view drives another by calling its ACTION via
+  `get().<other>.action()` (`get()` is typed against the whole `AppStore`) — NEVER
+  by mutating another slice's state (`set((s) => { s.other.x = … })`). Reads use
+  `get().<other>.value` (e.g. `get().session.sessionId`). See
+  `prompts/ANALYZE_EXISTING_CONTEXT.md` §5.
+- **Reading the store (NON-NEGOTIABLE — a past migration lost hours here):**
+  default to **atomic selectors** (`const x = useAppStore((s) => s.x)`); group
+  related reads ONLY via **`useShallow`**
+  (`useAppStore(useShallow((s) => ({ ... })))`). **NEVER** return a bare
+  object/array literal from a selector — it returns a new reference every render
+  and re-renders on every store change. Before finishing any component, grep it for
+  `useAppStore((s) => ({` / `useAppStore((s) => [` and confirm each is wrapped in
+  `useShallow` or split atomically. See `prompts/ANALYZE_EXISTING_CONTEXT.md` §4.
 
 ## Build / migration order
 
@@ -69,10 +82,11 @@ you add a page in Step 4, add its `case` here.
 ### Step 4 — Page slice, ONE at a time
 **4a. Analyze first → `prompts/ANALYZE_EXISTING_CONTEXT.md`.** For each context,
 produce a migration plan: classify PERSISTED (soft) vs VOLATILE (non-persisted)
-data, map existing Apollo queries/mutations to slice actions, and list which
+data, map existing Apollo queries/mutations to slice actions, list which
 React-state hooks (`useState`/`useMemo`/`useCallback`/`useRef`/`useEffect`) to
-delete because the store now owns that logic. Do not skip this — it defines the
-slice's `{{Name}}Form` and its actions.
+delete because the store now owns that logic, and note any cross-slice
+touch-points (what this context reads/drives on other slices). Do not skip this —
+it defines the slice's `{{Name}}Form` and its actions.
 
 **4b. Implement → `prompts/IMPLEMENT_PAGE_SLICE.md`.** Using the plan, create the
 slice folder, wire it into `pages.ts`, `appStore.ts`, `hydrationSlice.ts`, and the
@@ -94,10 +108,15 @@ Once a page's component consumes the slice, test the store↔UI wiring via
 - [ ] Session + hydration slices present/updated (Steps 2–3); `case` added for the
       new key with the exhaustiveness guard still compiling.
 - [ ] Analyzed the context (Step 4a): persisted-vs-volatile table, query→action
-      map, and React-state-hook disposition list produced.
+      map, React-state-hook disposition list, and cross-slice touch-point list
+      produced.
+- [ ] Cross-slice updates go through `get().<other>.action()` (or read
+      `get().<other>.value`) — no `set((s) => { s.other.x = … })` into another slice.
 - [ ] Page slice folder created with all files + explicit inlined fields (Step 4b).
 - [ ] Wired into `pages.ts`, `appStore.ts`, `hydrationSlice.ts`, API SEED/schema.
 - [ ] Slice unit tests added (Step 5) and component/hook tests added (Step 6).
+- [ ] Selector self-check passed: no unwrapped `useAppStore((s) => ({ … }))` /
+      `=> [ … ]`; multi-value reads use `useShallow`, everything else is atomic.
 - [ ] `npm run build && npx oxlint src && npm run test` all green.
 
 ## Reference index (open as needed)
